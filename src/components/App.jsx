@@ -1,77 +1,77 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getImages } from './Pixabayservise/Pixabayservise';
-import { Searchbar } from './Searchbar/Searchbar';
+import Searchbar from './Searchbar/Searchbar';
 import { ImageGallery } from './ImageGallery/ImageGallery';
-import { Modal } from 'components/Modal/Modal';
+import Modal from 'components/Modal/Modal';
 import { Loader } from 'components/Loader/Loader';
 import Button from './Button/Button';
 
-export class App extends Component {
-  state = {
-    images: [],
-    query: '',
-    page: 1,
-    totalImages: 0,
-    isLoadMore: false,
-    isLoading: false,
-    url: '',
-    error: '',
+const App = () => {
+  const [images, setImages] = useState([]);
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalImages, setTotal] = useState(0);
+  const [isLoadMore, setIsLoadMore] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [url, setUrl] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!query) return;
+
+      setIsLoading(true);
+      try {
+        const { hits: photos, totalHits: total_images } = await getImages(
+          query,
+          page
+        );
+
+        if (!photos.length) {
+          setError(
+            'Sorry, there are no images matching your search query. Please try again.'
+          );
+          return;
+        }
+
+        setImages(prevImages => [...prevImages, ...photos]);
+        setIsLoadMore(page < Math.ceil(total_images / 12));
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [query, page, totalImages, error]);
+
+  const handleSubmit = query => {
+    if (query === '') return;
+
+    setQuery(query);
+    setImages([]);
+    setPage(1);
+    setTotal();
   };
 
-  componentDidUpdate(_, prevState) {
-    const { query, page } = this.state;
-
-    if (query !== prevState.query || page !== prevState.page) {
-      this.setState({ isLoading: true, isSearchDisabled: true });
-      getImages(query, page)
-        .then(({ hits: photos, totalHits: total_images }) => {
-          if (!photos.length) {
-            this.setState({
-              error:
-                'Sorry, there are no images matching your search query. Please try again.',
-            });
-            return;
-          }
-          this.setState(prevState => ({
-            images: [...prevState.images, ...photos],
-            isLoadMore: page < Math.ceil(total_images / 12),
-          }));
-        })
-        .catch(error => {
-          this.setState({ error: error.message });
-        })
-        .finally(() => {
-          this.setState({ isLoading: false });
-        });
-    }
-  }
-
-  handleSubmit = query => {
-    if (this.state.query === query) {
-      return;
-    }
-
-    this.setState({ query, images: [], page: 1 });
+  const openModal = url => {
+    setUrl(url);
   };
 
-  openModal = url => {
-    this.setState({ url });
-  };
-  loadMore = () => {
-    this.setState(prevState => ({ page: prevState.page + 1 }));
+  const loadMore = () => {
+    setPage(prevPage => prevPage + 1);
   };
 
-  render() {
-    const { images, isLoadMore, isLoading, url } = this.state;
+  return (
+    <>
+      {isLoading && <Loader />}
+      <Searchbar onSubmit={handleSubmit} />
+      <ImageGallery images={images} openModal={openModal} />
+      {isLoadMore && <Button onClick={loadMore}>Load more</Button>}
+      {url && <Modal closeModal={() => setUrl('')} url={url} />}
+    </>
+  );
+};
 
-    return (
-      <>
-        {isLoading && <Loader />}
-        <Searchbar onSubmit={this.handleSubmit} />
-        <ImageGallery images={images} openModal={this.openModal} />
-        {isLoadMore && <Button onClick={this.loadMore}>Load more</Button>}
-        {url && <Modal closeModal={this.openModal} url={url} />}
-      </>
-    );
-  }
-}
+export default App;
