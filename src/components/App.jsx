@@ -36,6 +36,7 @@ const App = () => {
 
         setImages(prevImages => [...prevImages, ...photos]);
         setIsLoadMore(page < Math.ceil(total_images / 12));
+        setTotal(total_images);
       } catch (error) {
         setError(error.message);
       } finally {
@@ -44,7 +45,7 @@ const App = () => {
     };
 
     fetchData();
-  }, [query, page, totalImages, error]);
+  }, [query, page]);
 
   const handleSubmit = query => {
     if (query === '') return;
@@ -52,7 +53,7 @@ const App = () => {
     setQuery(query);
     setImages([]);
     setPage(1);
-    setTotal();
+    setTotal(0);
   };
 
   const openModal = url => {
